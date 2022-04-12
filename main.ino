@@ -37,6 +37,7 @@ SSD1306Wire display(0x3c, D3, D4);
 
 int led = LED_BUILTIN;
 String ircChannel = "";
+uint lastMessageAt = 0;
 
 WiFiClient wiFiClient;
 IRCClient client(IRC_SERVER, IRC_PORT, wiFiClient);
@@ -84,13 +85,13 @@ void setup() {
 }
 
 void displayStatus(String message) {
+  lastMessageAt = millis();
   display.clear();
   display.drawString(0, 0, message);
   display.display();
 }
 
 void loop() {
-
   // Try to connect to chat. If it loses connection try again
   if (!client.connected()) {
     Serial.println("Attempting to connect to " + ircChannel );
@@ -108,10 +109,18 @@ void loop() {
     return;
   }
   client.loop();
+
+  if (millis() - lastMessageAt >= 30000) {
+    // clear display after 30s of no chat activity
+    lastMessageAt = millis();
+    display.clear();
+    display.display();
+  }
 }
 
 void callback(IRCMessage ircMessage) {
   if (ircMessage.command == "PRIVMSG" && ircMessage.text[0] != '\001') {
+    lastMessageAt = millis();
     //Serial.println("Passed private message.");
     ircMessage.nick.toUpperCase();
 
